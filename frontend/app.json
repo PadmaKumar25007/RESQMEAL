@@ -1,0 +1,3 @@
+{
+  "expo": { "name": "ResQMeal", "slug": "resqmeal", "version": "1.0.0", "orientation": "portrait", "userInterfaceStyle": "light", "android": { "package": "com.resqmeal.app" } }
+}

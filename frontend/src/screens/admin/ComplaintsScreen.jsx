@@ -1,0 +1,6 @@
+import React,{useState} from 'react';
+import { View,Text,Pressable } from 'react-native';
+import RoleLayout from '../../components/RoleLayout.jsx';
+import { Badge,Button } from '../../components/UI.jsx';
+import { styles } from '../../theme.jsx';
+export default function ComplaintsScreen({setScreen}){const [resolved,setResolved]=useState(false);return <RoleLayout role="admin" screen="complaints" setScreen={setScreen} title="Complaints"><Text style={styles.intro}>Review reports from donors, NGOs and volunteers.</Text>{resolved?<View style={[styles.card,{alignItems:'center',padding:28}]}><Text style={{fontSize:50}}>✓</Text><Text style={[styles.title,{fontSize:20,marginTop:8}]}>All caught up</Text><Text style={styles.meta}>The complaint has been resolved and logged.</Text></View>:<View style={styles.card}><View style={styles.row}><Text style={styles.title}>Late pickup reported</Text><Badge color="orange">Open</Badge></View><Text style={styles.meta}>Reported by Hope Foundation · 2 hours ago</Text><Text style={[styles.meta,{marginTop:10}]}>“The volunteer arrived after the food’s safe window.”</Text><View style={styles.row}><Button small onPress={()=>setResolved(true)}>Resolve</Button><Pressable><Text style={{color:'#E65A4D',fontWeight:'800',fontSize:12}}>Escalate</Text></Pressable></View></View>}</RoleLayout>}
