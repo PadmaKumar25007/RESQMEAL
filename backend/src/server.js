@@ -1,8 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import mongoose from 'mongoose';
-import connectDB from './db/index.js';
+import { pool, connectDB, applySchema } from './db/index.js';
 
 // Route imports
 import donationRoutes from './routes/donationRoutes.js';
@@ -11,34 +10,45 @@ import deliveryRoutes from './routes/deliveryRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import statsRoutes from './routes/statsRoutes.js';
 import seedRoutes from './routes/seedRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Database connection
 connectDB();
+applySchema();
 
 // Health Check Endpoint
-app.get('/api/health', (_req, res) => {
-  const isConnected = mongoose.connection.readyState === 1;
-  res.status(isConnected ? 200 : 503).json({
-    ok: isConnected,
+app.get('/api/health', async (_req, res) => {
+  let database = 'disconnected';
+  try {
+    const result = await pool.query('SELECT NOW()');
+    database = result.rows[0].now ? 'connected' : 'disconnected';
+  } catch (_e) {
+    database = 'disconnected';
+  }
+  res.status(200).json({
+    ok: true,
     service: 'resqmeal-api',
-    database: isConnected ? 'connected' : 'disconnected',
+    database,
     timestamp: new Date().toISOString(),
   });
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/donations', donationRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/seed', seedRoutes);
+app.use('/api/ai', aiRoutes);
 
 // 404 Handler
 app.use((_req, res) => {

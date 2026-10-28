@@ -1,12 +1,51 @@
+# ---------- Dependencies ----------
 **/node_modules/
+
+# ---------- Expo / React Native ----------
 .expo/
 **/.expo/
 dist/
 web-build/
+android/
+ios/
+*.keystore
+
+# ---------- Secrets — never commit ----------
 .env
+**/.env
 .env.*
+**/.env.*
 !.env.example
+!**/.env.example
+
+# ---------- Python ----------
 __pycache__/
+**/__pycache__/
 .venv/
 venv/
 *.pyc
+*.pyo
+
+# ---------- AI model weights (large binaries) ----------
+*.pt
+*.pth
+*.onnx
+*.weights
+
+# ---------- Temporary / scratch files ----------
+*.tmp.cjs
+*.tmp.js
+*.tmp.mjs
+
+# ---------- OS / editor ----------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# ---------- Uploads (runtime data) ----------
+backend/uploads/
+
+# ---------- Logs ----------
+*.log
+npm-debug.log*

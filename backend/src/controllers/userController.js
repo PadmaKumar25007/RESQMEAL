@@ -1,71 +1,64 @@
-import { User } from '../models/index.js';
+import { pool } from '../db/index.js';
 
-// Get all users (Admin user management)
+// GET /api/users (admin user management)
 export const getUsers = async (req, res) => {
   try {
-    const { role, status } = req.query;
-    const filter = {};
-    if (role) filter.role = role;
-    if (status) filter.status = status;
+    const { role, status, limit } = req.query;
+    const conditions = [];
+    const args = [];
+    let sql = `SELECT * FROM users`;
 
-    const users = await User.find(filter).select('-passwordHash').sort({ createdAt: -1 });
+    if (role) { args.push(role); conditions.push(`role = $${args.length}`); }
+    if (status) { args.push(status); conditions.push(`status = $${args.length}`); }
 
-    // Format users for frontend display
-    const formatted = users.map((u) => {
-      let subtitle = '';
-      if (u.role === 'donor') subtitle = `Donor · ${u.organizationName || 'Individual'}`;
-      else if (u.role === 'ngo') subtitle = `NGO · ${u.organizationName || 'Community kitchen'}`;
-      else if (u.role === 'volunteer') subtitle = `Volunteer · ${u.phone || 'Active'}`;
-      else subtitle = `Admin · ${u.organizationName || 'Operations'}`;
+    let finalSql = sql;
+    if (conditions.length > 0) finalSql += ` WHERE ${conditions.join(' AND ')}`;
+    finalSql += ` ORDER BY created_at DESC LIMIT ${Number(limit) > 0 ? Number(limit) : 100}`;
 
-      return {
-        id: u._id,
-        name: u.name,
-        email: u.email,
-        role: u.role,
-        status: u.status === 'verified' ? 'Verified' : u.status === 'pending' ? 'Awaiting verification' : 'Suspended',
-        subtitle,
-        phone: u.phone,
-        organizationName: u.organizationName,
-        address: u.address,
-      };
-    });
+    const result = await pool.query(finalSql, args);
+    const data = result.rows.map((u) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      status: u.status === 'verified' ? 'Verified' : u.status === 'pending' ? 'Awaiting verification' : 'Suspended',
+      subtitle: u.role === 'donor' ? `Donor · ${u.organization_name || 'Individual'}` : u.role === 'ngo' ? `NGO · ${u.organization_name || 'Community kitchen'}` : u.role === 'volunteer' ? `Volunteer · ${u.phone || 'Active'}` : `Admin · ${u.organization_name || 'Operations'}`,
+      phone: u.phone,
+      organizationName: u.organization_name,
+      address: u.address,
+    }));
 
-    res.json({ success: true, count: formatted.length, data: formatted });
+    res.json({ success: true, count: data.length, data });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
-// Get default profile for current role (useful for prototype without auth)
+// GET /api/users/profile/:role — demo profile lookup by role
 export const getProfileByRole = async (req, res) => {
   try {
     const { role } = req.params;
-    const user = await User.findOne({ role }).select('-passwordHash');
-    if (!user) {
+    const result = await pool.query('SELECT * FROM users WHERE role = $1 ORDER BY created_at DESC LIMIT 1', [role]);
+    const u = result.rows[0];
+    if (!u) {
       return res.status(404).json({ success: false, message: `Profile for role ${role} not found` });
     }
-    res.json({ success: true, data: user });
+    res.json({ success: true, data: { id: u.id, name: u.name, email: u.email, role: u.role, status: u.status, phone: u.phone, organizationName: u.organization_name, address: u.address } });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
-// Update user status (verify, suspend)
+// PATCH /api/users/:id/status
 export const updateUserStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { status: status.toLowerCase() },
-      { new: true }
-    ).select('-passwordHash');
-
-    if (!user) {
+    const result = await pool.query('UPDATE users SET status = $2, updated_at = now() WHERE id = $1 RETURNING *', [status?.toLowerCase(), req.params.id]);
+    const u = result.rows[0];
+    if (!u) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-
-    res.json({ success: true, message: 'User status updated', data: user });
+    res.json({ success: true, message: 'User status updated', data: u });
   } catch (error) {
     res.status(400).json({ success: false, error: error.message });
   }
